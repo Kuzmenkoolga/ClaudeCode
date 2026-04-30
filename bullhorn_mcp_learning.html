@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom MCP Connector — CoWork Learning</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #818cf8;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --tag-bg: #1e3a5f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 40px 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px; right: -200px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    max-width: 780px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--tag-bg);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: var(--accent2);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+    animation: fadeDown 0.5s ease forwards;
+  }
+
+  .badge .dot {
+    width: 6px; height: 6px;
+    background: var(--accent2);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #93c5fd 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fadeDown 0.6s ease forwards;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 40px;
+    animation: fadeDown 0.7s ease forwards;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .timeline-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--warning);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .timeline-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(245,158,11,0.3), transparent);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: fadeUp 0.5s ease forwards;
+    opacity: 0;
+  }
+
+  .card:hover {
+    border-color: rgba(59,130,246,0.4);
+    transform: translateY(-2px);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card:nth-child(1) { animation-delay: 0.1s; }
+  .card:nth-child(2) { animation-delay: 0.2s; }
+  .card:nth-child(3) { animation-delay: 0.3s; }
+  .card:nth-child(4) { animation-delay: 0.4s; }
+  .card:nth-child(5) { animation-delay: 0.5s; }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .icon-wrap {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .icon-wrap.blue { background: rgba(59,130,246,0.15); }
+  .icon-wrap.cyan { background: rgba(6,182,212,0.15); }
+  .icon-wrap.indigo { background: rgba(129,140,248,0.15); }
+  .icon-wrap.green { background: rgba(16,185,129,0.15); }
+  .icon-wrap.amber { background: rgba(245,158,11,0.15); }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .card-body {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  .highlight-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-top: 16px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .highlight-box.cyan { border-left-color: var(--accent2); }
+  .highlight-box.green { border-left-color: var(--success); }
+  .highlight-box.amber { border-left-color: var(--warning); }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--accent2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .tag {
+    background: var(--tag-bg);
+    border: 1px solid rgba(59,130,246,0.2);
+    color: var(--accent2);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .tag.green {
+    background: rgba(16,185,129,0.1);
+    border-color: rgba(16,185,129,0.2);
+    color: var(--success);
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 32px 0;
+  }
+
+  .cta-box {
+    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(6,182,212,0.08));
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    animation: fadeUp 0.5s 0.6s ease forwards;
+    opacity: 0;
+  }
+
+  .cta-box h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .cta-box p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+    line-height: 1.7;
+  }
+
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 22px;
+    border-radius: 8px;
+    transition: background 0.2s, transform 0.15s;
+    margin: 4px;
+  }
+
+  .link-btn:hover { background: #2563eb; transform: translateY(-1px); }
+  .link-btn.outline {
+    background: transparent;
+    border: 1px solid rgba(59,130,246,0.4);
+    color: var(--accent2);
+  }
+  .link-btn.outline:hover { background: rgba(59,130,246,0.1); }
+
+  .footer-note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 32px;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="badge"><span class="dot"></span> CoWork Learning Guide · Path 2</div>
+
+  <h1>Custom MCP Connector<br>for Bullhorn ATS</h1>
+  <p class="subtitle">Best long-term solution · Requires developer · Native Claude CoWork integration</p>
+
+  <div class="timeline-label">🔵 Do this after Make is confirmed working</div>
+
+  <!-- Card 1 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon-wrap blue">🔌</div>
+      <div>
+        <div class="card-title">What is a Custom MCP Connector?</div>
+        <div class="card-desc">Model Context Protocol — how Claude talks to external tools</div>
+      </div>
+    </div>
+    <div class="card-body">
+      MCP (Model Context Protocol) is the standard Anthropic built so Claude can connect directly to outside apps and data sources. A custom MCP connector is a small server a developer builds that sits between Claude CoWork and Bullhorn's REST API — making Bullhorn feel like a native part of Claude.
+    </div>
+    <div class="highlight-box">
+      💡 Think of it as building a dedicated bridge between Claude and Bullhorn — once built, Claude can search jobs, pull resumes, and generate reports directly without any manual steps.
+    </div>
+  </div>
+
+  <!-- Card 2 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon-wrap cyan">⚙️</div>
+      <div>
+        <div class="card-title">What It Requires</div>
+        <div class="card-desc">People, tools, and access you'll need</div>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><span><strong>A developer</strong> — someone who can build a small Node.js or Python server and deploy it to the internet</span></div>
+      <div class="step"><div class="step-num">2</div><span><strong>Bullhorn API credentials</strong> — Client ID, Secret, Datacenter URL, Corp ID (from your BH rep)</span></div>
+      <div class="step"><div class="step-num">3</div><span><strong>A public server URL</strong> — Anthropic requires the MCP server to be accessible over the public internet</span></div>
+      <div class="step"><div class="step-num">4</div><span><strong>Claude Team or Enterprise plan</strong> — custom connectors are available on these plans</span></div>
+    </div>
+  </div>
+
+  <!-- Card 3 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon-wrap indigo">✨</div>
+      <div>
+        <div class="card-title">What You Get</div>
+        <div class="card-desc">Capabilities once the connector is live</div>
+      </div>
+    </div>
+    <div class="tag-row">
+      <span class="tag">Direct job order search</span>
+      <span class="tag">Resume & candidate search</span>
+      <span class="tag">Real-time data</span>
+      <span class="tag">No manual exports</span>
+      <span class="tag">Native CoWork experience</span>
+      <span class="tag">AI-powered insights</span>
+    </div>
+    <div class="highlight-box cyan" style="margin-top:16px;">
+      🚀 Instead of switching between Bullhorn and Claude, you simply ask Claude in CoWork: <em>"Find me candidates with 5 years of .NET experience available in Texas"</em> — and it queries Bullhorn directly.
+    </div>
+  </div>
+
+  <!-- Card 4 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon-wrap green">📋</div>
+      <div>
+        <div class="card-title">How to Get Started</div>
+        <div class="card-desc">Steps to kick off the MCP build</div>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><span>Confirm Make workflow works for your team first</span></div>
+      <div class="step"><div class="step-num">2</div><span>Read Anthropic's Custom Connector docs (linked below)</span></div>
+      <div class="step"><div class="step-num">3</div><span>Get your Bullhorn API credentials ready from your BH rep</span></div>
+      <div class="step"><div class="step-num">4</div><span>Hire or assign a developer to build and host the MCP server</span></div>
+      <div class="step"><div class="step-num">5</div><span>Add the MCP connector URL in Claude CoWork settings</span></div>
+      <div class="step"><div class="step-num">6</div><span>Test and go live 🎉</span></div>
+    </div>
+  </div>
+
+  <!-- Card 5 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="icon-wrap amber">⚠️</div>
+      <div>
+        <div class="card-title">Important Notes from Anthropic</div>
+        <div class="card-desc">Confirmed directly via support ticket #215474133127254</div>
+      </div>
+    </div>
+    <div class="card-body">
+      Anthropic confirmed there is no native Bullhorn connector available yet. These are the key requirements they flagged:
+    </div>
+    <div class="highlight-box amber">
+      • Connectors in CoWork reach external services through Anthropic's cloud infrastructure<br><br>
+      • Any custom MCP connector must point to a server accessible over the <strong>public internet</strong><br><br>
+      • Make (Integromat) is a valid and supported workaround in the meantime
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- CTA -->
+  <div class="cta-box">
+    <h3>📚 Anthropic Documentation</h3>
+    <p>Use these official links from your support response to guide your developer<br>when you're ready to build the custom connector.</p>
+    <a class="link-btn" href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp" target="_blank">→ Custom Connectors Guide</a>
+    <a class="link-btn outline" href="https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities" target="_blank">→ Connectors Overview</a>
+    <a class="link-btn outline" href="https://support.claude.com/en/articles/13837440-use-plugins-in-claude-cowork" target="_blank">→ CoWork Plugins Guide</a>
+  </div>
+
+  <p class="footer-note">TPA Technologies · CoWork Learning · Bullhorn Integration Path 2 · Updated April 2026</p>
+
+</div>
+</body>
+</html>
